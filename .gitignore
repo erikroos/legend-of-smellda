@@ -1,3 +1,13 @@
+# Copyrighted stuff
+assets/music/*
+assets/sounds/*
+
+# Venv
+.game-venv
+
+# Claude
+.claude
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
