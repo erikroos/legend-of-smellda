@@ -5,7 +5,7 @@ class TransitionManager:
     def __init__(self, collision_manager):
         self.collision_manager = collision_manager
 
-    def check_cave_exit(self, player, cave_entrances, current_cave, find_safe_position_callback):
+    def check_cave_exit(self, player, cave_entrances, current_cave, find_safe_position_callback, room_manager=None):
         """Check of speler de grot verlaat"""
         # Exit is onderaan in het midden
         exit_rect = pygame.Rect(
@@ -21,6 +21,8 @@ class TransitionManager:
                 exit_room_pos = (1, 1)
             elif current_cave == 'hint':
                 exit_room_pos = (2, 0)
+            elif current_cave == 'shop':
+                exit_room_pos = (0, 2)
             else:
                 return False, None  # Geen geldige cave
 
@@ -35,6 +37,11 @@ class TransitionManager:
                 player.y = safe_pos[1] - player.height // 2
                 player.rect.x = player.x
                 player.rect.y = player.y
+
+                # Roep on_player_enter aan voor de overworld room
+                if room_manager:
+                    overworld_room = room_manager.get_current_room()
+                    overworld_room.on_player_enter()
 
             return True, None  # Exited cave
 
@@ -59,6 +66,9 @@ class TransitionManager:
 
                 # Plaats speler op een veilige plek bij de hidden stairs
                 current_room = room_manager.get_current_room()
+
+                # Roep on_player_enter aan voor de overworld room
+                current_room.on_player_enter()
                 if current_room.hidden_stairs:
                     stairs_x = current_room.hidden_stairs.x
                     stairs_y = current_room.hidden_stairs.y
@@ -132,7 +142,16 @@ class TransitionManager:
             player, current_room)
 
         if should_transition:
+            # Roep on_player_exit aan voor de huidige room
+            current_room.on_player_exit()
+
             room_manager.change_room(direction)
+
+            # Haal de nieuwe room op
+            new_room = room_manager.get_current_room()
+
+            # Roep on_player_enter aan voor de nieuwe room
+            new_room.on_player_enter()
 
             # Zet speler op nieuwe positie na room transition
             if direction == 'west':

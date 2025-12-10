@@ -36,6 +36,7 @@ class DungeonRoom:
         self.fires = []  # Decoratieve vuren
         self.floor_tiles = []  # Decoratieve vloertegels
         self.health_drops = []  # Health drops die verschijnen bij enemy deaths
+        self.rupee_drops = []  # Rupee drops die verschijnen bij enemy deaths
 
         self.wall_thickness = WALL_THICKNESS
         self.wall_color = DUNGEON_WALL_COLOR
@@ -202,6 +203,13 @@ class DungeonRoom:
             if health_drop.collected:
                 self.health_drops.remove(health_drop)
 
+        # Update rupee drops
+        for rupee_drop in self.rupee_drops[:]:
+            rupee_drop.update()
+            # Verwijder drops die gecollecteerd of verlopen zijn
+            if rupee_drop.collected:
+                self.rupee_drops.remove(rupee_drop)
+
     def render(self, screen, hud_height=HUD_HEIGHT):
         # Teken donkere achtergrond (ondergronds gevoel)
         game_area = pygame.Rect(0, hud_height, self.screen_width, self.screen_height)
@@ -329,6 +337,10 @@ class DungeonRoom:
         for health_drop in self.health_drops:
             health_drop.render(screen)
 
+        # Render rupee drops
+        for rupee_drop in self.rupee_drops:
+            rupee_drop.render(screen)
+
 class DungeonManager:
     def __init__(self, screen_width=GAME_WIDTH, screen_height=GAME_HEIGHT):
         self.rooms = {}
@@ -412,7 +424,7 @@ class DungeonManager:
         center_room.add_exit('south')
         center_room.add_exit('east')
         center_room.add_exit('west')
-        center_room.add_bats(2)  # vleermuizen in center room
+        center_room.add_bats(3)  # vleermuizen in center room
         self.rooms[(0, 0)] = center_room
 
         # North room (0, -1) - Boss room met afgeschermd gedeelte
@@ -460,7 +472,7 @@ class DungeonManager:
 
         # Voeg triforce toe in het afgeschermde gedeelte (gecentreerd, meer noordelijk)
         triforce_x = start_x + block_size * 2 - 20  # Gecentreerd in het afgeschermde gebied
-        triforce_y = start_y + block_size * 1 - 10  # Meer noordelijk
+        triforce_y = start_y + block_size - 20  # Meer noordelijk
         north_room.triforce = Triforce(triforce_x, triforce_y)
         north_room.triforce_revealed = True  # Triforce is altijd zichtbaar
 
@@ -474,13 +486,13 @@ class DungeonManager:
             self.screen_width // 2 - 15,
             HUD_HEIGHT + self.screen_height // 2 - 15
         )
-        east_room.add_bats(3)  # vleermuizen in east room - moet eerst verslaan!
+        east_room.add_bats(5)  # vleermuizen in east room - moet eerst verslaan!
         self.rooms[(1, 0)] = east_room
 
         # West room (-1, 0) - alleen exit naar center, MET SLIMES
         west_room = DungeonRoom(-1, 0, self.screen_width, self.screen_height)
         west_room.add_exit('east')
-        west_room.add_slimes(3)  # slimes in west room - splitsen in kleine slimes!
+        west_room.add_slimes(4)  # slimes in west room - splitsen in kleine slimes!
         # Plaats heart container in het midden van de kamer
         west_room.heart_container = HeartContainer(
             self.screen_width // 2 - 15,

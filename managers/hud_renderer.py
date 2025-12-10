@@ -144,12 +144,49 @@ class HUDRenderer:
     def render_inventory(self, player):
         """Render inventory items in de HUD (midden-rechts)"""
         # Positie: tussen de minimap en de hartjes
-        inv_x = SCREEN_WIDTH // 2 + 50
+        inv_x = SCREEN_WIDTH // 2
         inv_y = (HUD_HEIGHT - 30) // 2  # Verticaal gecentreerd
+
+        # Teken rupee counter (altijd zichtbaar)
+        self.draw_rupee_counter(inv_x - 80, inv_y, player.rupees)
 
         # Teken sleutel als speler deze heeft
         if player.has_key:
-            self.draw_key_icon(inv_x, inv_y, 30)
+            self.draw_key_icon(inv_x + 50, inv_y, 30)
+
+    def draw_rupee_counter(self, x, y, count):
+        """Teken rupee symbool met teller"""
+        # Teken rupee diamant symbool (groen-geel voor 1 rupee)
+        rupee_size = 20
+        rupee_center_x = x + rupee_size // 2
+        rupee_center_y = y + rupee_size // 2
+
+        # Diamant vorm (4 punten)
+        points = [
+            (rupee_center_x, rupee_center_y - rupee_size // 2),  # Boven
+            (rupee_center_x + rupee_size // 2, rupee_center_y),  # Rechts
+            (rupee_center_x, rupee_center_y + rupee_size // 2),  # Onder
+            (rupee_center_x - rupee_size // 2, rupee_center_y),  # Links
+        ]
+
+        # Groen-geel gradient effect: teken meerdere lagen
+        pygame.draw.polygon(self.screen, (100, 200, 50), points)  # Groen-geel basis
+
+        # Donkere rand voor contrast
+        pygame.draw.polygon(self.screen, (50, 100, 25), points, 2)
+
+        # Highlight voor glans effect (kleine witte driehoek bovenin)
+        highlight_points = [
+            (rupee_center_x - 4, rupee_center_y - 4),
+            (rupee_center_x + 4, rupee_center_y - 4),
+            (rupee_center_x, rupee_center_y + 2),
+        ]
+        pygame.draw.polygon(self.screen, (200, 255, 150), highlight_points)
+
+        # Teken teller rechts naast het symbool
+        font = pygame.font.Font(None, 28)
+        count_text = font.render(f"x {count}", True, (255, 255, 255))
+        self.screen.blit(count_text, (x + rupee_size + 8, y + 5))
 
     def draw_key_icon(self, x, y, size):
         """Teken een sleutel icoon in de HUD"""

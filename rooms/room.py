@@ -27,6 +27,13 @@ class Room:
         self.pushable_block = None
         self.hidden_stairs = None
         self.health_drops = []  # Health drops die verschijnen bij enemy deaths
+        self.rupee_drops = []  # Rupee drops die verschijnen bij enemy deaths
+
+        # Monster respawn systeem
+        self.initial_monster_configs = []  # Bewaar oorspronkelijke monster posities
+        self.respawn_timer = 0  # Timer voor monster respawn
+        self.respawn_delay = 180  # 3 seconden @ 60 FPS
+        self.all_monsters_dead = False  # Track of alle monsters dood zijn
 
         self.wall_thickness = WALL_THICKNESS
         self.wall_color = WALL_COLOR
@@ -193,6 +200,8 @@ class Room:
                 if not overlap:
                     monster = Monster(x, y)
                     self.monsters.append(monster)
+                    # Bewaar configuratie voor respawn
+                    self.initial_monster_configs.append({'x': x, 'y': y})
                     placed = True
 
 
@@ -221,11 +230,52 @@ class Room:
                     self.occupied_tiles.add((stairs_grid_x, stairs_grid_y))
                     break
 
+    def respawn_monsters(self):
+        """Respawn monsters als genoeg tijd is verstreken"""
+        if self.all_monsters_dead and self.respawn_timer >= self.respawn_delay:
+            # Clear oude dode monsters
+            self.monsters.clear()
+            # Clear drops
+            self.health_drops.clear()
+            self.rupee_drops.clear()
+
+            # Spawn nieuwe monsters op oorspronkelijke posities
+            for config in self.initial_monster_configs:
+                monster = Monster(config['x'], config['y'])
+                self.monsters.append(monster)
+
+            # Reset respawn tracking
+            self.all_monsters_dead = False
+            self.respawn_timer = 0
+
+    def on_player_exit(self):
+        """Aangeroepen wanneer de speler de room verlaat"""
+        # Als alle monsters dood zijn, start respawn timer
+        if self.all_monsters_dead:
+            # Timer loopt al door in update()
+            pass
+
+    def on_player_enter(self):
+        """Aangeroepen wanneer de speler de room binnenkomt"""
+        # Check of we moeten respawnen
+        self.respawn_monsters()
+
     def update(self, screen_width, screen_height, hud_height=HUD_HEIGHT):
         # Update alle monsters
         for monster in self.monsters:
             if monster.alive:
                 monster.update(self.obstacles, screen_width, screen_height, hud_height, self.pushable_block)
+
+        # Check of alle monsters dood zijn
+        if len(self.monsters) > 0 and all(not m.alive for m in self.monsters):
+            if not self.all_monsters_dead:
+                # Alle monsters zijn net doodgegaan
+                self.all_monsters_dead = True
+                self.respawn_timer = 0
+
+        # Update respawn timer als alle monsters dood zijn
+        if self.all_monsters_dead:
+            self.respawn_timer += 1
 
         # Update hidden stairs timer (als deze bestaat)
         if self.hidden_stairs:
@@ -237,6 +287,13 @@ class Room:
             # Verwijder drops die gecollecteerd of verlopen zijn
             if health_drop.collected:
                 self.health_drops.remove(health_drop)
+
+        # Update rupee drops
+        for rupee_drop in self.rupee_drops[:]:
+            rupee_drop.update()
+            # Verwijder drops die gecollecteerd of verlopen zijn
+            if rupee_drop.collected:
+                self.rupee_drops.remove(rupee_drop)
 
     def render(self, screen, hud_height=HUD_HEIGHT):
         # Teken achtergrond alleen in game field gebied (onder HUD)
@@ -314,6 +371,10 @@ class Room:
         # Render health drops
         for health_drop in self.health_drops:
             health_drop.render(screen)
+
+        # Render rupee drops
+        for rupee_drop in self.rupee_drops:
+            rupee_drop.render(screen)
 
         # Later: render monsters hier
         for monster in self.monsters:

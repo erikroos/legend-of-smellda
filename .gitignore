@@ -6,7 +6,8 @@ assets/sounds/*
 .game-venv
 
 # Claude
-.claude
+.claude*
+.clinerules
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -2,8 +2,9 @@ import pygame
 from constants import GAME_WIDTH, GAME_HEIGHT, HUD_HEIGHT, WALL_THICKNESS
 
 class DungeonInteractionManager:
-    def __init__(self, get_item_sound=None):
+    def __init__(self, get_item_sound=None, get_heart_sound=None):
         self.get_item_sound = get_item_sound
+        self.get_heart_sound = get_heart_sound
 
     def check_locked_door_collision(self, player, dungeon_room, old_x, old_y):
         """Check of speler tegen een locked door aan loopt"""
@@ -59,9 +60,9 @@ class DungeonInteractionManager:
                 dungeon_room.key.collect()
                 player.has_key = True
 
-                # Speel get-item geluid af
-                if self.get_item_sound:
-                    self.get_item_sound.play()
+                # Speel get-heart geluid af
+                if self.get_heart_sound:
+                    self.get_heart_sound.play()
 
     def check_heart_container_collection(self, player, dungeon_room):
         """Check of speler de heart container oppakt"""

@@ -1,20 +1,34 @@
 import random
 from items.health_drop import HealthDrop
+from items.rupee import Rupee
 
 class CombatManager:
     def __init__(self, collision_manager, hurt_sound=None):
         self.collision_manager = collision_manager
         self.hurt_sound = hurt_sound
 
+    def _try_spawn_drop(self, x, y, room):
+        """Probeer een drop te spawnen op deze positie
+        Een vijand geeft OF een health drop OF een rupee drop (niet beide)"""
+        rand = random.randint(1, 20)
+        if rand <= 3:  # 1-3 = health drop (15% kans)
+            health_drop = HealthDrop(x, y)
+            room.health_drops.append(health_drop)
+        elif rand <= 9:  # 4-9 = 1-rupee (30% kans)
+            rupee = Rupee(x, y, value=1)
+            room.rupee_drops.append(rupee)
+        elif rand <= 12:  # 10-12 = 5-rupee (15% kans)
+            rupee = Rupee(x, y, value=5)
+            room.rupee_drops.append(rupee)
+
     def check_sword_hits(self, player, room):
         """Check of het zwaard monsters raakt"""
         hit_monsters = self.collision_manager.check_sword_hits(player, room.monsters)
         for monster in hit_monsters:
             monster.take_damage()
-            # Als monster dood is, spawn health drop met ~14% kans (1 op 7)
-            if not monster.alive and random.randint(1, 7) == 1:
-                health_drop = HealthDrop(monster.x, monster.y)
-                room.health_drops.append(health_drop)
+            # Als monster dood is, probeer een drop te spawnen (health OF rupee)
+            if not monster.alive:
+                self._try_spawn_drop(monster.x, monster.y, room)
 
     def check_monster_damage(self, player, room):
         """Check of monsters de speler raken"""
@@ -40,10 +54,9 @@ class CombatManager:
         for bat in dungeon_room.bats:
             if bat.alive and sword_rect.colliderect(bat.rect):
                 bat.take_damage(1)  # Vleermuizen sterven in 1 slag
-                # Als bat dood is, spawn health drop met ~14% kans (1 op 7)
-                if not bat.alive and random.randint(1, 7) == 1:
-                    health_drop = HealthDrop(bat.x, bat.y)
-                    dungeon_room.health_drops.append(health_drop)
+                # Als bat dood is, probeer een drop te spawnen (health OF rupee)
+                if not bat.alive:
+                    self._try_spawn_drop(bat.x, bat.y, dungeon_room)
 
     def check_bat_player_collision(self, player, dungeon_room):
         """Check of een vleermuis de speler raakt"""
@@ -142,13 +155,12 @@ class CombatManager:
                     slimes_to_add.append(small_slime1)
                     slimes_to_add.append(small_slime2)
 
-                    # Verwijder de grote slime
+                    # Verwijder de grote slime (GEEN drops voor grote slimes)
                     slime.alive = False
 
-                # Als slime dood is (kleine of grote), spawn health drop met ~14% kans (1 op 7)
-                if not slime.alive and random.randint(1, 7) == 1:
-                    health_drop = HealthDrop(slime.x, slime.y)
-                    dungeon_room.health_drops.append(health_drop)
+                # Als KLEINE slime dood is, probeer een drop te spawnen (health OF rupee)
+                elif not slime.alive and not slime.is_large:
+                    self._try_spawn_drop(slime.x, slime.y, dungeon_room)
 
                 # Stop na eerste hit (anders raakt het zwaard meerdere slimes tegelijk)
                 break

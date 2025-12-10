@@ -6,6 +6,7 @@ from rooms.room import RoomManager
 from managers.collision_manager import CollisionManager
 from rooms.cave_room import CaveRoom
 from rooms.hint_cave_room import HintCaveRoom
+from rooms.shop_cave_room import ShopCaveRoom
 from rooms.cave_entrance import CaveEntrance
 from rooms.dungeon_room import DungeonManager
 from managers.hud_renderer import HUDRenderer
@@ -41,15 +42,20 @@ class Game:
         hint_entrance, hint_exit_pos = self.create_cave_entrance()
         self.cave_entrances[(2, 0)] = (hint_entrance, hint_exit_pos)
 
+        # Maak shop cave entrance in room (0, 2) - linker onderhoek
+        shop_entrance, shop_exit_pos = self.create_cave_entrance()
+        self.cave_entrances[(0, 2)] = (shop_entrance, shop_exit_pos)
+
         # Maak room manager (nu met cave entrance informatie)
         self.room_manager = RoomManager(GAME_WIDTH, GAME_HEIGHT, 3, 3, self.cave_entrances)
         self.collision_manager = CollisionManager()
 
         # Cave system
         self.in_cave = False
-        self.current_cave = None  # Track welke cave we in zijn: 'sword' of 'hint'
+        self.current_cave = None  # Track welke cave we in zijn: 'sword', 'hint', of 'shop'
         self.sword_cave_room = CaveRoom()
         self.hint_cave_room = HintCaveRoom()
+        self.shop_cave_room = ShopCaveRoom()
 
         # Dungeon system
         self.in_dungeon = False
@@ -63,7 +69,10 @@ class Game:
         self.hud_renderer = HUDRenderer(self.screen)
         self.combat_manager = CombatManager(self.collision_manager, self.audio_manager.hurt_sound)
         self.transition_manager = TransitionManager(self.collision_manager)
-        self.dungeon_interaction_manager = DungeonInteractionManager(self.audio_manager.get_item_sound)
+        self.dungeon_interaction_manager = DungeonInteractionManager(
+            self.audio_manager.get_item_sound,
+            self.audio_manager.get_heart_sound
+        )
 
         # Zorg dat speler niet op een obstakel spawnt
         self.fix_player_spawn()
@@ -262,9 +271,19 @@ class Game:
                 health_drop.collect()
                 # Geef speler 2 HP (1 heel hartje)
                 self.player.health = min(self.player.health + 2, self.player.max_health)
-                # Speel item-geluid af
-                if self.audio_manager.get_item_sound:
-                    self.audio_manager.get_item_sound.play()
+                # Speel get-heart geluid af
+                if self.audio_manager.get_heart_sound:
+                    self.audio_manager.get_heart_sound.play()
+
+        # Check rupee drop collection
+        for rupee_drop in dungeon_room.rupee_drops[:]:
+            if not rupee_drop.collected and self.player.rect.colliderect(rupee_drop.rect):
+                rupee_drop.collect()
+                # Geef speler rupees
+                self.player.rupees += rupee_drop.value
+                # Speel get-rupee geluid af
+                if self.audio_manager.get_rupee_sound:
+                    self.audio_manager.get_rupee_sound.play()
 
         # Check triforce collection (win condition!)
         if self.dungeon_interaction_manager.check_triforce_collection(self.player, dungeon_room):
@@ -331,6 +350,14 @@ class Game:
                         self.audio_manager.get_item_sound.play()
         elif self.current_cave == 'hint':
             self.hint_cave_room.update()
+        elif self.current_cave == 'shop':
+            self.shop_cave_room.update()
+
+            # Check heart container purchase (alleen in shop cave)
+            if self.shop_cave_room.check_purchase(self.player):
+                # Speel get-item geluid af
+                if self.audio_manager.get_item_sound:
+                    self.audio_manager.get_item_sound.play()
 
         # Enforce wall boundaries in cave (keep player within bounds)
         # Left wall
@@ -360,7 +387,8 @@ class Game:
         exited, new_cave = self.transition_manager.check_cave_exit(
             self.player, self.cave_entrances, self.current_cave,
             lambda pos, room: self.transition_manager.find_safe_cave_exit_position(
-                pos, room, self.room_manager, self.player))
+                pos, room, self.room_manager, self.player),
+            self.room_manager)
 
         if exited:
             self.in_cave = False
@@ -383,6 +411,8 @@ class Game:
                     self.current_cave = 'sword'
                 elif current_room_pos == (2, 0):
                     self.current_cave = 'hint'
+                elif current_room_pos == (0, 2):
+                    self.current_cave = 'shop'
 
                 # Plaats speler bij de onderkant van de cave (bij de exit)
                 self.player.x = GAME_WIDTH // 2 - self.player.width // 2
@@ -465,9 +495,19 @@ class Game:
                 health_drop.collect()
                 # Geef speler 2 HP (1 heel hartje)
                 self.player.health = min(self.player.health + 2, self.player.max_health)
-                # Speel item-geluid af
-                if self.audio_manager.get_item_sound:
-                    self.audio_manager.get_item_sound.play()
+                # Speel get-heart geluid af
+                if self.audio_manager.get_heart_sound:
+                    self.audio_manager.get_heart_sound.play()
+
+        # Check ook rupee drops
+        for rupee_drop in current_room.rupee_drops[:]:
+            if not rupee_drop.collected and self.player.rect.colliderect(rupee_drop.rect):
+                rupee_drop.collect()
+                # Geef speler rupees
+                self.player.rupees += rupee_drop.value
+                # Speel get-rupee geluid af
+                if self.audio_manager.get_rupee_sound:
+                    self.audio_manager.get_rupee_sound.play()
 
     def check_pushable_block(self):
         """Check of speler een duwbaar blok probeert te duwen"""
@@ -577,6 +617,8 @@ class Game:
                 self.sword_cave_room.render(self.screen, HUD_HEIGHT)
             elif self.current_cave == 'hint':
                 self.hint_cave_room.render(self.screen, HUD_HEIGHT)
+            elif self.current_cave == 'shop':
+                self.shop_cave_room.render(self.screen, HUD_HEIGHT)
 
             # Render player
             self.player.render(self.screen)

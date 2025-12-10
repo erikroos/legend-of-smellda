@@ -58,6 +58,20 @@ class AudioManager:
             print(f"Kon boss sound niet laden: {e}")
             self.boss_sound = None
 
+        try:
+            self.get_heart_sound = pygame.mixer.Sound('assets/sounds/get-heart.wav')
+            self.get_heart_sound.set_volume(0.4)
+        except pygame.error as e:
+            print(f"Kon get-heart sound niet laden: {e}")
+            self.get_heart_sound = None
+
+        try:
+            self.get_rupee_sound = pygame.mixer.Sound('assets/sounds/get-rupee.wav')
+            self.get_rupee_sound.set_volume(0.4)
+        except pygame.error as e:
+            print(f"Kon get-rupee sound niet laden: {e}")
+            self.get_rupee_sound = None
+
     def switch_to_dungeon_music(self):
         """Switch naar dungeon muziek"""
         if self.overworld_music_playing:
@@ -97,6 +111,10 @@ class AudioManager:
                 self.hurt_sound.set_volume(0.0)
             if self.boss_sound:
                 self.boss_sound.set_volume(0.0)
+            if self.get_heart_sound:
+                self.get_heart_sound.set_volume(0.0)
+            if self.get_rupee_sound:
+                self.get_rupee_sound.set_volume(0.0)
         else:
             # Unmute alles - herstel originele volumes
             pygame.mixer.music.set_volume(0.2)
@@ -110,6 +128,10 @@ class AudioManager:
                 self.hurt_sound.set_volume(0.4)
             if self.boss_sound:
                 self.boss_sound.set_volume(0.5)
+            if self.get_heart_sound:
+                self.get_heart_sound.set_volume(0.4)
+            if self.get_rupee_sound:
+                self.get_rupee_sound.set_volume(0.4)
 
     def stop(self):
         """Stop de muziek netjes"""

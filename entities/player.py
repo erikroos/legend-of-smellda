@@ -26,6 +26,7 @@ class Player:
 
         # Inventory
         self.has_key = False  # Dungeon sleutel
+        self.rupees = 0  # Geld systeem
 
         # Health systeem
         self.max_health = PLAYER_MAX_HEALTH
