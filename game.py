@@ -67,7 +67,7 @@ class Game:
         # Initialiseer managers
         self.audio_manager = AudioManager()
         self.hud_renderer = HUDRenderer(self.screen)
-        self.combat_manager = CombatManager(self.collision_manager, self.audio_manager.hurt_sound)
+        self.combat_manager = CombatManager(self.collision_manager, self.audio_manager.hurt_sound, self.audio_manager.shield_sound)
         self.transition_manager = TransitionManager(self.collision_manager)
         self.dungeon_interaction_manager = DungeonInteractionManager(
             self.audio_manager.get_item_sound,
@@ -224,12 +224,17 @@ class Game:
                 elif event.key == pygame.K_m:
                     self.audio_manager.toggle_mute()
                 elif event.key == pygame.K_SPACE:
-                    if self.player.attack():
+                    # Alleen attack als speler leeft en het spel niet gewonnen is
+                    if self.player.alive and not self.game_won and self.player.attack():
                         # Speel zwaard geluid af
                         if self.audio_manager.sword_sound:
                             self.audio_manager.sword_sound.play()
 
     def update(self):
+        # Als speler dood is of het spel gewonnen is, bevries de game (stop updates)
+        if not self.player.alive or self.game_won:
+            return
+
         # Haal keyboard state op
         keys = pygame.key.get_pressed()
 
@@ -396,9 +401,9 @@ class Game:
 
     def update_overworld(self, old_x, old_y):
         """Update logic voor overworld"""
-        # Update current room (monsters)
+        # Update current room (monsters en archers)
         current_room = self.room_manager.get_current_room()
-        current_room.update(GAME_WIDTH, HUD_HEIGHT + GAME_HEIGHT, HUD_HEIGHT)
+        current_room.update(GAME_WIDTH, HUD_HEIGHT + GAME_HEIGHT, HUD_HEIGHT, self.player)
 
         # Check cave entrance (voor alle rooms met een cave)
         current_room_pos = self.room_manager.current_room
@@ -447,11 +452,17 @@ class Game:
         # Check collision met obstakels
         self.check_obstacle_collisions(old_x, old_y, block_was_pushed)
 
-        # Check combat: zwaard raakt monsters
+        # Check combat: zwaard raakt monsters en archers
         self.combat_manager.check_sword_hits(self.player, current_room)
+        self.combat_manager.check_archer_sword_collision(self.player, current_room)
 
-        # Check damage: monsters raken speler
+        # Check damage: monsters en archers raken speler
         self.combat_manager.check_monster_damage(self.player, current_room)
+        self.combat_manager.check_archer_player_collision(self.player, current_room)
+
+        # Check arrow collisions
+        self.combat_manager.check_arrow_player_collision(self.player, current_room)
+        self.combat_manager.check_arrow_obstacle_collision(current_room, GAME_WIDTH, HUD_HEIGHT + GAME_HEIGHT)
 
         # Check item collection
         self.check_item_collection()

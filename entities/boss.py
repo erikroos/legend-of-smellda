@@ -9,7 +9,7 @@ class Boss:
         self.height = 70
         self.rect = pygame.Rect(x, y, self.width, self.height)
         self.alive = True
-        self.health = 3  # 3 hits nodig om te verslaan
+        self.health = 5  # 5 hits nodig om te verslaan
 
         # Movement
         self.speed = 1

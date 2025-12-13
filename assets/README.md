@@ -6,7 +6,10 @@ Music:
 
 Sounds:
  * boss.wav
+ * get-heart.wav
  * get-item.wav
+ * get-rupee.wav
  * hurt.wav
  * secret.wav
+ * shield.wav
  * sword-slash.wav

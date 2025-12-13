@@ -2,6 +2,7 @@ import pygame
 import random
 from world.obstacle import Obstacle
 from entities.monster import Monster
+from entities.archer import Archer
 from items.item import Item
 from items.pushable_block import PushableBlock
 from world.hidden_stairs import HiddenStairs
@@ -10,7 +11,8 @@ from constants import (
     WALL_COLOR, EXIT_COLOR, BACKGROUND_COLOR, TILE_SIZE,
     MIN_OBSTACLES_PER_ROOM, MAX_OBSTACLES_PER_ROOM,
     MIN_MONSTERS_PER_ROOM, MAX_MONSTERS_PER_ROOM,
-    SAFE_DISTANCE_FROM_EXIT, MONSTER_WIDTH, MONSTER_HEIGHT
+    SAFE_DISTANCE_FROM_EXIT, MONSTER_WIDTH, MONSTER_HEIGHT,
+    ARCHER_WIDTH, ARCHER_HEIGHT
 )
 
 class Room:
@@ -21,6 +23,7 @@ class Room:
         self.screen_height = screen_height
         self.exits = {'north': False, 'south': False, 'east': False, 'west': False}
         self.monsters = []
+        self.archers = []
         self.walls = []
         self.obstacles = []
         self.items = []
@@ -31,6 +34,7 @@ class Room:
 
         # Monster respawn systeem
         self.initial_monster_configs = []  # Bewaar oorspronkelijke monster posities
+        self.initial_archer_configs = []  # Bewaar oorspronkelijke archer posities
         self.respawn_timer = 0  # Timer voor monster respawn
         self.respawn_delay = 180  # 3 seconden @ 60 FPS
         self.all_monsters_dead = False  # Track of alle monsters dood zijn
@@ -197,11 +201,33 @@ class Room:
                             overlap = True
                             break
 
+                # Check overlap met archers
                 if not overlap:
-                    monster = Monster(x, y)
-                    self.monsters.append(monster)
-                    # Bewaar configuratie voor respawn
-                    self.initial_monster_configs.append({'x': x, 'y': y})
+                    for archer in self.archers:
+                        padded_rect = archer.rect.inflate(40, 40)
+                        if temp_rect.colliderect(padded_rect):
+                            overlap = True
+                            break
+
+                if not overlap:
+                    # Voor starting room (1,1): alleen normale monsters, geen archers
+                    # Voor andere rooms: 30% kans op archer, 70% kans op normaal monster
+                    if self.grid_x == 1 and self.grid_y == 1:
+                        # Alleen normale monsters in starting room
+                        monster = Monster(x, y)
+                        self.monsters.append(monster)
+                        # Bewaar configuratie voor respawn
+                        self.initial_monster_configs.append({'x': x, 'y': y})
+                    elif random.random() < 0.3:
+                        archer = Archer(x, y)
+                        self.archers.append(archer)
+                        # Bewaar configuratie voor respawn
+                        self.initial_archer_configs.append({'x': x, 'y': y})
+                    else:
+                        monster = Monster(x, y)
+                        self.monsters.append(monster)
+                        # Bewaar configuratie voor respawn
+                        self.initial_monster_configs.append({'x': x, 'y': y})
                     placed = True
 
 
@@ -235,6 +261,7 @@ class Room:
         if self.all_monsters_dead and self.respawn_timer >= self.respawn_delay:
             # Clear oude dode monsters
             self.monsters.clear()
+            self.archers.clear()
             # Clear drops
             self.health_drops.clear()
             self.rupee_drops.clear()
@@ -243,6 +270,11 @@ class Room:
             for config in self.initial_monster_configs:
                 monster = Monster(config['x'], config['y'])
                 self.monsters.append(monster)
+
+            # Spawn nieuwe archers op oorspronkelijke posities
+            for config in self.initial_archer_configs:
+                archer = Archer(config['x'], config['y'])
+                self.archers.append(archer)
 
             # Reset respawn tracking
             self.all_monsters_dead = False
@@ -260,16 +292,26 @@ class Room:
         # Check of we moeten respawnen
         self.respawn_monsters()
 
-    def update(self, screen_width, screen_height, hud_height=HUD_HEIGHT):
+    def update(self, screen_width, screen_height, hud_height=HUD_HEIGHT, player=None):
         # Update alle monsters
         for monster in self.monsters:
             if monster.alive:
                 monster.update(self.obstacles, screen_width, screen_height, hud_height, self.pushable_block)
 
-        # Check of alle monsters dood zijn
-        if len(self.monsters) > 0 and all(not m.alive for m in self.monsters):
+        # Update alle archers (hebben player nodig om te mikken)
+        if player:
+            for archer in self.archers:
+                if archer.alive:
+                    archer.update(self.obstacles, screen_width, screen_height, hud_height, self.pushable_block, player)
+
+        # Check of alle monsters EN archers dood zijn
+        all_enemies_dead = (len(self.monsters) + len(self.archers) > 0 and
+                           all(not m.alive for m in self.monsters) and
+                           all(not a.alive for a in self.archers))
+
+        if all_enemies_dead:
             if not self.all_monsters_dead:
-                # Alle monsters zijn net doodgegaan
+                # Alle vijanden zijn net doodgegaan
                 self.all_monsters_dead = True
                 self.respawn_timer = 0
 
@@ -376,9 +418,12 @@ class Room:
         for rupee_drop in self.rupee_drops:
             rupee_drop.render(screen)
 
-        # Later: render monsters hier
+        # Render monsters en archers
         for monster in self.monsters:
             monster.render(screen)
+
+        for archer in self.archers:
+            archer.render(screen)
 
 class RoomManager:
     def __init__(self, screen_width=GAME_WIDTH, screen_height=GAME_HEIGHT, world_width=3, world_height=3, cave_entrances=None):

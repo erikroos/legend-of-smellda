@@ -1,11 +1,13 @@
 import random
 from items.health_drop import HealthDrop
 from items.rupee import Rupee
+from constants import WALL_THICKNESS, HUD_HEIGHT
 
 class CombatManager:
-    def __init__(self, collision_manager, hurt_sound=None):
+    def __init__(self, collision_manager, hurt_sound=None, shield_sound=None):
         self.collision_manager = collision_manager
         self.hurt_sound = hurt_sound
+        self.shield_sound = shield_sound
 
     def _try_spawn_drop(self, x, y, room):
         """Probeer een drop te spawnen op deze positie
@@ -231,3 +233,82 @@ class CombatManager:
                     self.hurt_sound.play()
                 # Verwijder vuurbal na hit
                 dungeon_room.boss.fireballs.remove(fireball)
+
+    def check_archer_sword_collision(self, player, room):
+        """Check of het zwaard een archer raakt"""
+        if not player.attacking:
+            return
+
+        sword_rect = player.get_attack_rect()
+        if not sword_rect:
+            return
+
+        # Check collision met alle archers
+        for archer in room.archers:
+            if archer.alive and sword_rect.colliderect(archer.rect):
+                archer.take_damage()
+                # Als archer dood is, probeer een drop te spawnen (health OF rupee)
+                if not archer.alive:
+                    self._try_spawn_drop(archer.x, archer.y, room)
+
+    def check_archer_player_collision(self, player, room):
+        """Check of een archer de speler raakt (contact damage)"""
+        for archer in room.archers:
+            if not archer.alive:
+                continue
+
+            if player.rect.colliderect(archer.rect):
+                # Archer raakt speler als cooldown voorbij is
+                if archer.can_damage:
+                    hurt = player.take_damage(1)  # Een half hartje schade
+                    archer.reset_damage_cooldown()
+                    # Speel hurt geluid
+                    if hurt and self.hurt_sound:
+                        self.hurt_sound.play()
+
+    def check_arrow_player_collision(self, player, room):
+        """Check of een pijl de speler raakt"""
+        for archer in room.archers:
+            if not archer.alive:
+                continue
+
+            for arrow in archer.arrows[:]:
+                if player.rect.colliderect(arrow.rect):
+                    # Check of het schild de pijl kan blokkeren
+                    if player.can_block_arrow(arrow.x, arrow.y, arrow.dx, arrow.dy):
+                        # Pijl wordt geblokkeerd door schild!
+                        archer.arrows.remove(arrow)
+                        # Speel shield geluid af
+                        if self.shield_sound:
+                            self.shield_sound.play()
+                        continue
+
+                    # Pijl raakt speler = 1 HP schade (half hartje)
+                    hurt = player.take_damage(1)
+                    if hurt and self.hurt_sound:
+                        self.hurt_sound.play()
+                    # Verwijder pijl na hit
+                    archer.arrows.remove(arrow)
+
+    def check_arrow_obstacle_collision(self, room, screen_width, screen_height):
+        """Check of pijlen obstakels of muren raken en verwijder ze"""
+        for archer in room.archers:
+            if not archer.alive:
+                continue
+
+            for arrow in archer.arrows[:]:
+                # Check muren
+                hit_wall = (arrow.x < WALL_THICKNESS or
+                           arrow.x > screen_width - WALL_THICKNESS or
+                           arrow.y < HUD_HEIGHT + WALL_THICKNESS or
+                           arrow.y > screen_height - WALL_THICKNESS)
+
+                if hit_wall:
+                    archer.arrows.remove(arrow)
+                    continue
+
+                # Check obstakels (rotsen, water, bomen)
+                for obstacle in room.obstacles:
+                    if arrow.rect.colliderect(obstacle.rect):
+                        archer.arrows.remove(arrow)
+                        break

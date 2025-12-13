@@ -68,6 +68,8 @@ HAIR_COLOR = (150, 100, 50)
 BELT_COLOR = (139, 69, 19)
 SWORD_BLADE_COLOR = (192, 192, 192)
 SWORD_HANDLE_COLOR = (218, 165, 32)
+SHIELD_COLOR = (101, 67, 33)  # Bruin voor schild
+SHIELD_EDGE_COLOR = (70, 45, 20)  # Donkerder bruin voor rand
 
 # Monster kleuren
 MONSTER_BODY_COLOR = (150, 50, 50)
@@ -150,3 +152,21 @@ MINIMAP_UNVISITED_ROOM_COLOR = (60, 60, 60)  # Onbezochte rooms donkerder
 GAME_OVER_TEXT_COLOR = (255, 0, 0)  # Rood voor game over tekst
 GAME_OVER_SUBTITLE_COLOR = (255, 255, 255)  # Wit voor subtitle
 OVERLAY_COLOR = (0, 0, 0)  # Zwart voor overlay
+
+# Archer settings
+ARCHER_WIDTH = 30
+ARCHER_HEIGHT = 30
+ARCHER_SPEED = 1.0
+ARCHER_HEALTH = 2
+ARCHER_SHOOT_COOLDOWN = 120  # 2 seconden @ 60 FPS
+ARROW_SPEED = 4
+ARROW_WIDTH = 12
+ARROW_HEIGHT = 4
+
+# Archer kleuren
+ARCHER_BODY_COLOR = (32, 140, 128)  # Donker turkoois
+ARCHER_EYE_COLOR = (255, 255, 255)
+ARCHER_PUPIL_COLOR = (0, 0, 0)
+ARCHER_BOW_COLOR = (139, 69, 19)  # Bruin voor boog
+ARROW_COLOR = (160, 82, 45)  # Bruin voor pijl
+ARROW_TIP_COLOR = (128, 128, 128)  # Grijs voor pijlpunt

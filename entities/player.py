@@ -4,7 +4,7 @@ from constants import (
     PLAYER_ATTACK_COOLDOWN, PLAYER_INVINCIBILITY_FRAMES,
     SWORD_LENGTH, SWORD_WIDTH, SWORD_WIDTH_RENDER, HALF_PLAYER_WIDTH_MINUS_SWORD,
     TUNIC_COLOR, SKIN_COLOR, HAIR_COLOR, BELT_COLOR,
-    SWORD_BLADE_COLOR, SWORD_HANDLE_COLOR
+    SWORD_BLADE_COLOR, SWORD_HANDLE_COLOR, SHIELD_COLOR, SHIELD_EDGE_COLOR
 )
 
 class Player:
@@ -26,7 +26,8 @@ class Player:
 
         # Inventory
         self.has_key = False  # Dungeon sleutel
-        self.rupees = 0  # Geld systeem
+        self.rupees = 0  # Geldsysteem
+        self.has_shield = False  # Schild voor bescherming tegen pijlen
 
         # Health systeem
         self.max_health = PLAYER_MAX_HEALTH
@@ -100,6 +101,29 @@ class Player:
             return True
         return False
 
+    def can_block_arrow(self, arrow_x, arrow_y, arrow_dx, arrow_dy):
+        """Check of het schild een pijl kan blokkeren op basis van richting"""
+        if not self.has_shield:
+            return False
+
+        # Bereken vanuit welke richting de pijl komt
+        # arrow_dx en arrow_dy zijn genormaliseerde richting vectoren
+
+        # Pijl komt van links (positieve dx betekent pijl gaat naar rechts)
+        if arrow_dx > 0.5 and self.facing == 'left':
+            return True
+        # Pijl komt van rechts (negatieve dx betekent pijl gaat naar links)
+        elif arrow_dx < -0.5 and self.facing == 'right':
+            return True
+        # Pijl komt van boven (positieve dy betekent pijl gaat naar beneden)
+        elif arrow_dy > 0.5 and self.facing == 'up':
+            return True
+        # Pijl komt van onder (negatieve dy betekent pijl gaat naar boven)
+        elif arrow_dy < -0.5 and self.facing == 'down':
+            return True
+
+        return False
+
     def get_attack_rect(self):
         # Geef hitbox terug gebaseerd op facing richting
         if self.facing == 'left':
@@ -129,7 +153,7 @@ class Player:
         cx = self.x + self.width // 2
 
         if self.facing == 'down':
-            # Lichaam (tuniek)
+            # Lichaam (tuniek) - eerst tekenen
             pygame.draw.rect(screen, TUNIC_COLOR, (self.x + 8, self.y + 16, 24, 18))
             # Hoofd
             pygame.draw.circle(screen, SKIN_COLOR, (cx, self.y + 10), 8)
@@ -141,6 +165,28 @@ class Player:
             # Riem
             pygame.draw.rect(screen, BELT_COLOR, (self.x + 8, self.y + 23, 24, 3))
 
+            # Schild (over alles heen, aan de voorkant, als speler het heeft)
+            if self.has_shield:
+                shield_x = self.x + 4
+                shield_y = self.y + 16
+                shield_width = 14
+                shield_height = 20
+                # Schild vorm
+                pygame.draw.rect(screen, SHIELD_COLOR, (shield_x, shield_y, shield_width, shield_height))
+                # Donkere rand
+                pygame.draw.rect(screen, SHIELD_EDGE_COLOR, (shield_x, shield_y, shield_width, shield_height), 2)
+                # Decoratief kruisje
+                center_x_shield = shield_x + shield_width // 2
+                center_y_shield = shield_y + shield_height // 2
+                # Verticale lijn
+                pygame.draw.line(screen, SHIELD_EDGE_COLOR,
+                                (center_x_shield, shield_y + 4),
+                                (center_x_shield, shield_y + shield_height - 4), 2)
+                # Horizontale lijn
+                pygame.draw.line(screen, SHIELD_EDGE_COLOR,
+                                (shield_x + 3, center_y_shield),
+                                (shield_x + shield_width - 3, center_y_shield), 2)
+
         elif self.facing == 'up':
             # Lichaam (tuniek)
             pygame.draw.rect(screen, TUNIC_COLOR, (self.x + 8, self.y + 12, 24, 18))
@@ -151,6 +197,7 @@ class Player:
             pygame.draw.rect(screen, TUNIC_COLOR, (self.x + 22, self.y + 26, 8, 10))
             # Riem
             pygame.draw.rect(screen, BELT_COLOR, (self.x + 8, self.y + 19, 24, 3))
+            # Geen schild rendering bij 'up' - schild is niet zichtbaar op de rug
 
         elif self.facing == 'left':
             # Lichaam (tuniek)
@@ -163,6 +210,9 @@ class Player:
             pygame.draw.rect(screen, TUNIC_COLOR, (self.x + 14, self.y + 30, 10, 10))
             # Riem
             pygame.draw.rect(screen, BELT_COLOR, (self.x + 10, self.y + 23, 20, 3))
+            # Schild (dunne streep aan de voorkant/zijkant)
+            if self.has_shield:
+                pygame.draw.line(screen, SHIELD_COLOR, (self.x + 8, self.y + 18), (self.x + 8, self.y + 32), 3)
 
         elif self.facing == 'right':
             # Lichaam (tuniek)
@@ -175,6 +225,9 @@ class Player:
             pygame.draw.rect(screen, TUNIC_COLOR, (self.x + 16, self.y + 30, 10, 10))
             # Riem
             pygame.draw.rect(screen, BELT_COLOR, (self.x + 10, self.y + 23, 20, 3))
+            # Schild (dunne streep aan de voorkant/zijkant)
+            if self.has_shield:
+                pygame.draw.line(screen, SHIELD_COLOR, (self.x + 32, self.y + 18), (self.x + 32, self.y + 32), 3)
 
         # Teken zwaard tijdens aanval
         if self.attacking:
