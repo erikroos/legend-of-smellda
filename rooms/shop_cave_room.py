@@ -25,20 +25,20 @@ class ShopCaveRoom(BaseCaveRoom):
         old_man_y = HUD_HEIGHT + 120
         self.old_man = OldMan(old_man_x, old_man_y)
         # Pas tekst aan voor shop
-        self.old_man.text = "WELCOME TO MY SHOP!"
+        self.old_man.text = "BUY SOMETHING, WILL YA!"
         self.old_man.text2 = ""
 
         # Plaats heart container links voor de oude man
         heart_x = self.screen_width // 2 - 60
         heart_y = HUD_HEIGHT + 250
         self.heart_container = HeartContainer(heart_x, heart_y)
-        self.heart_container_price = 50
+        self.heart_container_price = 30
 
         # Plaats schild rechts voor de oude man
         shield_x = self.screen_width // 2 + 30
         shield_y = HUD_HEIGHT + 250
         self.shield = ShieldItem(shield_x, shield_y)
-        self.shield_price = 30
+        self.shield_price = 20
 
         # Track welke items al gekocht zijn
         self.heart_purchased = False
